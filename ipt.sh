@@ -1,3 +1,6 @@
+# Run this on the host linux system
+
+#IP address of the container used to sniff and analyse the packets
 echo "Sniffer's address: "
 read sn_ip
 

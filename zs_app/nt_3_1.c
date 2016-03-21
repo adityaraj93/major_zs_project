@@ -127,31 +127,36 @@ void fp(u_char *arg1, const struct pcap_pkthdr* pkhdr, const u_char* packet) {
 	printf("\n");	
 }
 
-	pcap_if_t *alldevs,*d;
+pcap_if_t *alldevs,*d;
+pcap_t *descr=NULL;
 
-	pcap_t *descr=NULL;
 void breakl(int s){
 	pcap_breakloop(descr);
 }
+
 void main(){
 	char message[10],dev[20]={0};
 	int i=0,j;
 	bpf_u_int32 pMask,pNet;
 	struct bpf_program fpr;
 	pcap_findalldevs(&alldevs,message);
+	printf("-----------------------------------------------------------------------------------------------------------\n");
+	printf("No. : Interface       :    Mask          : Net             :  Description  \n");
+	printf("-----------------------------------------------------------------------------------------------------------\n");
 	for(d=alldevs;d;d=d->next)
 	{
-		printf("%d - %-15s : ",++i,d->name);
+		printf("%3d : %-15s : ",++i,d->name);
 		pcap_lookupnet(d->name,&pNet,&pMask,message);
 		ip = (struct ipaddr*)&pNet;
 		msk = (struct ipaddr*)&pMask;
-		printf(" Mask %3u.%3u.%3u.%3u : Net %3u.%3u.%3u.%3u : ",
+		printf(" %3u.%3u.%3u.%3u : %3u.%3u.%3u.%3u : ",
 			msk->a,msk->b,msk->c,msk->d,ip->a,ip->b,ip->c,ip->d);
 		if(d->description)
 			printf(" %s \n",d->description);
 		else
 			printf("No description\n");
 	}
+	printf("-----------------------------------------------------------------------------------------------------------\n");
 	printf("Enter the interface number: ");
 	scanf("%d",&i);
 	--i;
@@ -160,14 +165,18 @@ void main(){
 	while(j<i)
 		d=d->next,j++;
 	printf("Selected interface: %s\n",d->name);	
+	printf("-----------------------------------------------------------------------------------------------------------\n");
 	strcpy(dev,d->name);
 	printf("Promiscuous: 0-No 1-yes? ");
 	scanf("%d",&i);
-	printf("output:- %s : type ",dev);
+	printf("Output:- %s : Type ",dev);
 	descr = pcap_open_live(dev,2048,i,512,message);
 	if(pcap_datalink(descr)==DLT_EN10MB)// its a etherner (10MBps) packet
 		printf("Ethernet \n");
 	
+	printf("-----------------------------------------------------------------------------------------------------------\n");
+
+	printf("Starting Capture......\n");
 		
 	signal(SIGINT,breakl);
 	signal(SIGTSTP,breakl);

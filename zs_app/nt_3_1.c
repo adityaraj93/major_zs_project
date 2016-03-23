@@ -44,21 +44,33 @@ void printIpAdd(struct ip *addr,int lenp)
 	dst = (struct ipaddr*)&(addr->ip_dst.s_addr);	// take the destination address
 	hdrlen = addr->ip_hl;
 	protocol = addr->ip_p;
-	printf("Source IP: %3u.%3u.%3u.%3u Dest IP: %3u.%3u.%3u.%3u HLen: %u P: ",
-		src->a,src->b,src->c,src->d,dst->a,dst->b,dst->c,dst->d,hdrlen);
+	printf("%3u.%3u.%3u.%3u : %3u.%3u.%3u.%3u :",
+		src->a,src->b,src->c,src->d,dst->a,dst->b,dst->c,dst->d);
 	// for TCP protocols
 	if(protocol == TCPPROTO){ 			
-		printf("TCP");
+		printf("   TCP    :");
 		tcph = (struct tcphdr*)(((char*)addr) + 4*hdrlen) ;
 		lenp-=4*hdrlen;
-		printf(" SPort: %u DPort: %u",
+		printf(" %5u : %5u :",
 			ntohs(tcph->source),ntohs(tcph->dest));
-		if(tcph->syn)
-			printf(" SYN");
-		if(tcph->fin)
+		if(tcph->syn){
+			printf(" SYN ");
+		}
+		else{
+			printf("     ");
+		}
+		if(tcph->fin){
 			printf(" FIN ");
-		if(tcph->ack)
-			printf(" ACK ");
+		}
+		else{
+			printf("     ");
+		}
+		if(tcph->ack){
+			printf(" ACK :");
+		}
+		else{
+			printf("     :");
+		}
 		list[pcount].proto = protocol;
 		list[pcount].flags = tcph->th_flags;
 		list[pcount].ack_no = tcph->th_ack;
@@ -78,10 +90,11 @@ void printIpAdd(struct ip *addr,int lenp)
 		insertNode(&list[pcount-1],flow_tuple_hash_table);
 	}
 	else if(protocol == UDPPROTO){				// for UDP protocols
-		printf("UDP");
+		printf("   UDP    :");
 		udph = (struct udphdr*)(((char*)addr) + 4*hdrlen);
-		printf(" SPort: %u DPort: %u\n",
+		printf(" %5u : %5u :",
 			ntohs(udph->source),ntohs(udph->dest));
+		printf("%12s:"," ");
 		list[pcount].proto = protocol;
 		list[pcount].next = NULL;
 		list[pcount].prev = NULL;
@@ -92,7 +105,7 @@ void printIpAdd(struct ip *addr,int lenp)
 		list[pcount++].dstip = IP_S_TO_N(dst);
 		insertNode(&list[pcount-1],flow_tuple_hash_table);
 	}
-	else 	printf("%d",protocol);
+	else 	printf("   %3d    :",protocol);
 	printf("\n");
 }
 
@@ -103,24 +116,24 @@ void fp(u_char *arg1, const struct pcap_pkthdr* pkhdr, const u_char* packet) {
 	static int count,ipc,arpc,ip6c,uc;
 	struct ip *addr;
 	++count;
-	printf("%3d: %6d ",count,pkhdr->len);
+	printf("%6d : %6d ",count,pkhdr->len);
 	eth = (struct ether_header *) packet;
 	switch(ntohs(eth->ether_type))
 	{
-		case ETHERTYPE_IP :  printf(": Ethernet type: %04x IPv4 %2d :",
+		case ETHERTYPE_IP :  printf(": %04x IPv4 : %4d :",
 						ntohs(eth->ether_type),++ipc);
 					addr = (struct ip*) (packet+sizeof(struct ether_header));
 					printIpAdd(addr,pkhdr->caplen-sizeof(struct ether_header));
 					return;
 					break;
-		case ETHERTYPE_ARP : printf(": Ethernet type: %04x  ARP %2d :\n",
+		case ETHERTYPE_ARP : printf(": %04x  ARP : %4d :\n",
 						ntohs(eth->ether_type),++arpc);
 					return;
 					break;
-		case ETHERTYPE_IPV6: printf(": Ethernet type: %04x IPv6 %2d :",
+		case ETHERTYPE_IPV6: printf(": %04x IPv6 : %4d :",
 						ntohs(eth->ether_type),++ip6c);
 					break;
-		default : 	     printf("  Ethernet type: %04x UNKN %2d :",
+		default : 	     printf(": %04x UNKN : %4d :",
 						ntohs(eth->ether_type),++uc);
 					break;
 	}
@@ -136,7 +149,7 @@ void breakl(int s){
 
 void main(){
 	char message[10],dev[20]={0};
-	int i=0,j;
+	int i=0,j,interface_count=0;
 	bpf_u_int32 pMask,pNet;
 	struct bpf_program fpr;
 	pcap_findalldevs(&alldevs,message);
@@ -155,10 +168,15 @@ void main(){
 			printf(" %s \n",d->description);
 		else
 			printf("No description\n");
+		interface_count++;
 	}
 	printf("-----------------------------------------------------------------------------------------------------------\n");
-	printf("Enter the interface number: ");
-	scanf("%d",&i);
+	do{
+		printf("Enter the interface number: ");
+		scanf("%d",&i);
+		if( i<1 || i>interface_count)
+			printf("ERROR : Not a valid interface number.\n");
+	}while(i<1 || i>interface_count);
 	--i;
 	j=0;
 	d=alldevs;
@@ -176,11 +194,14 @@ void main(){
 	
 	printf("-----------------------------------------------------------------------------------------------------------\n");
 
-	printf("Starting Capture......\n");
+	printf("Starting Capture......\n\n");
 		
 	signal(SIGINT,breakl);
 	signal(SIGTSTP,breakl);
-	
+	printf("----------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+	printf(":Packet: Header :   Type    : Cnt  :    Source IP   :  Destination    : Protocol : Source: Dest  : TCP Flags     : Is Flow \n");
+	printf(":Number: Length :           :      :     address    :  IP  address    :          : Port  : Port  :               : Present \n");
+	printf("----------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 
 	// not ssh, arp, and not broadcast
 	pcap_compile(descr,&fpr,"not port 22 and not arp and not dst host 255.255.255.255",0,0); 

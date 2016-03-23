@@ -104,7 +104,7 @@ void insertNode(flow_tuple_t *node, flow_tuple_t *table[])
 	flow_tuple_t *ptr=NULL;
 	// return if node already present
 	if((index=isPresent(node,table))==-1){
-		printf("Present\n");
+		printf(" Present ");
 		return;
 	}
 	// if its the first node in the bucket

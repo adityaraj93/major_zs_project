@@ -94,7 +94,7 @@ void printIpAdd(struct ip *addr,int lenp)
 		udph = (struct udphdr*)(((char*)addr) + 4*hdrlen);
 		printf(" %5u : %5u :",
 			ntohs(udph->source),ntohs(udph->dest));
-		printf("%12s:"," ");
+		printf("%15s:"," ");
 		list[pcount].proto = protocol;
 		list[pcount].next = NULL;
 		list[pcount].prev = NULL;
@@ -200,7 +200,7 @@ void main(){
 	signal(SIGTSTP,breakl);
 	printf("----------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 	printf(":Packet: Header :   Type    : Cnt  :    Source IP   :  Destination    : Protocol : Source: Dest  : TCP Flags     : Is Flow \n");
-	printf(":Number: Length :           :      :     address    :  IP  address    :          : Port  : Port  :               : Present \n");
+	printf(":Number: Length :           :      :     address    :  IP  address    :          : Port  : Port  :               : Present? \n");
 	printf("----------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 
 	// not ssh, arp, and not broadcast

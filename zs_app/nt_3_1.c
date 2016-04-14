@@ -6,6 +6,7 @@
 */
 #include"project_includes/project.h"
 #include"project_includes/hash_project2.c"
+#include"project_includes/regex_project.c"
 #include<pcap/pcap.h>
 #include<sys/types.h>
 #include<stdio.h>
@@ -79,8 +80,8 @@ print_hex_ascii_line(const u_char *payload, int len, int offset)
 }
 
 /*
- *  * print packet payload data (avoid printing binary data)
- *   */
+ *  print packet payload data (avoid printing binary data)
+ */
 void
 print_payload(const u_char *payload, int len)
 {
@@ -89,10 +90,12 @@ print_payload(const u_char *payload, int len)
     int line_len;
     int offset = 0;					/* zero-based offset counter */
     const u_char *ch = payload;
-
+		
+	
     if (len <= 0)
         return;
 
+	
     /* data fits on one line */
     if (len <= line_width) {
         print_hex_ascii_line(ch, len, offset);
@@ -123,10 +126,22 @@ print_payload(const u_char *payload, int len)
 }
 
 // function to copy the payload of the packet to the flow_tuple structure
-void tcp_payload_copy(const struct tcphdr *tcp_and_payload, flow_tuple_t *node, u_int payload_length)
+void tcp_payload_copy(	const struct tcphdr *tcp_and_payload, 	// pointer to TCP header
+					  	flow_tuple_t *node, 					// pointer to the index in the list where node is to be inserted
+					  	u_int payload_length,					// length of the payload
+					  	session_t *session)						// session_t structure in which payload is to be copied
 {
+	int i;
 	const u_char *payload = (u_char*)(((u_char*)tcp_and_payload)+ tcp_and_payload->th_off*4);
-	print_payload(payload, payload_length);
+	session->payload_length = payload_length;
+	if (payload_length<0)
+	{
+		return;
+	}
+	bzero(session->payload,PAYLOAD_MAX_LENGTH);
+	for(i=0;i<payload_length;i++){
+		session->payload[i]=*(payload+i);
+	}
 }
 
 
@@ -141,7 +156,7 @@ void printIpAdd(struct ip *addr,int lenp)
 	dst = (struct ipaddr*)&(addr->ip_dst.s_addr);	// take the destination address
 	hdrlen = addr->ip_hl;
 	protocol = addr->ip_p;
-	printf("%3u.%3u.%3u.%3u | %3u.%3u.%3u.%3u |",
+	printf("%3u.%3u.%3u.%3u > %3u.%3u.%3u.%3u |",
 		src->a,src->b,src->c,src->d,dst->a,dst->b,dst->c,dst->d);
 	// for TCP protocols
 	if(protocol == TCPPROTO){ 			
@@ -178,13 +193,12 @@ void printIpAdd(struct ip *addr,int lenp)
 		list[pcount].sport = ntohs(tcph->source);
 		list[pcount].dport = ntohs(tcph->dest);
 		list[pcount].srcip = IP_S_TO_N(src);
-		bzero(list[pcount].payload,2000);
-
-
-
-		tcp_payload_copy(tcph,list+pcount, ntohs(addr->ip_len)-(addr->ip_hl*4 + tcph->th_off*4)  ); 
-//		strncpy(list[pcount].payload,
-//			(char*)(((char*)tcph)+ 4*tcph->th_off),lenp);
+		session_t *session = (session_t*)malloc(sizeof(session_t));
+		session->next=NULL;
+		tcp_payload_copy( tcph,list+pcount, 
+						  ntohs(addr->ip_len)-(addr->ip_hl*4 + tcph->th_off*4),
+						  session  ); 
+		list[pcount].session_list = session;
 
 		list[pcount++].dstip = IP_S_TO_N(dst);
 
@@ -299,10 +313,10 @@ void main(){
 		
 	signal(SIGINT,breakl);
 	signal(SIGTSTP,breakl);
-	printf("----------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+	printf("------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 	printf("|Packet| Header |   Type    | Cnt  |    Source IP   |  Destination    | Protocol | Source| Dest  | TCP Flags     | Is Flow \n");
 	printf("|Number: Length |           |      |     address    |  IP  address    |          | Port  | Port  |               | Present? \n");
-	printf("----------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+	printf("------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 
 	// not ssh, arp, and not broadcast
 	pcap_compile(descr,&fpr,"not port 22 and not arp and not dst host 255.255.255.255",0,0); 
@@ -310,7 +324,7 @@ void main(){
 	pcap_loop(descr,MAX_PACKETS,fp,NULL);	// start capturing MAX_PACKETS packets and callback null
 	pcap_freealldevs(alldevs);	// free all after cpaturing is done
 	
-	printf("\n\n***************************************************************************************************************************\n\n");
+/*	printf("\n\n***************************************************************************************************************************\n\n");
 	for(i=0;i<pcount; i++)
 	{	
 		printf("%5d IPS %8x PS %5d IPD %8x PD %5d PROTO %2d",
@@ -329,6 +343,6 @@ void main(){
 		printf("\n");
 	}
 
-	printf("\n\n***************************************************************************************************************************\n\n");
+	printf("\n\n***************************************************************************************************************************\n\n");*/
 	printTable(flow_tuple_hash_table);
 }

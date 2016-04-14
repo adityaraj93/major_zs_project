@@ -12,7 +12,7 @@
 	   node
 	5. print the complete hash table:	printTable(flow_tuple_t *table[])
 	6. delete a node from the table :	deleteNode(flow_tuple_t *node,
-							flow_tuple_t *table[])
+								flow_tuple_t *table[])
 */
 
 //#include "project.h"
@@ -23,6 +23,14 @@
 #define PRINTIP(ip) printf("%u.%u.%u.%u",\
 			((ip&0xff000000)>>24),((ip&0x00ff0000)>>16),\
 			((ip&0x0000ff00)>>8),(ip&0x000000ff))
+			
+/* 
+* Definition in the main file
+*/ 
+void
+print_hex_ascii_line(const u_char *payload, int len, int offset);
+void
+print_payload(const u_char *payload, int len);
 /*
 *	the hash function for the hash table
 */
@@ -54,6 +62,16 @@ flow_tuple_t* searchNode(flow_tuple_t *node, u_int32_t index,
 	}
 	return ptr;
 }
+/*
+*	Function to insert the session node into the singly linked list of 
+*	flow to the hash table. This function is used only when the flow is 
+*	already present in the hash table.
+*/
+void insert_session_node(flow_tuple_t *node, session_t *session)
+{
+	session->next=node->session_list;
+	node->session_list=session;
+}
 /* 	
 *	Checks if a node is present in the table or not
 *	If present returns -1, else returns the hash index for the table
@@ -74,6 +92,11 @@ u_int32_t isPresent(flow_tuple_t *node,flow_tuple_t *table[])
 				ptr->dstip==node->dstip){
 				ptr->count++;
 				ptr->outC++;
+				if (node->proto==TCPPROTO)
+				{
+					insert_session_node(ptr,node->session_list);
+				}
+				
 				return -1;
 			}
 			else if(ptr->proto == node->proto &&
@@ -83,6 +106,10 @@ u_int32_t isPresent(flow_tuple_t *node,flow_tuple_t *table[])
 				ptr->dstip == node->srcip){
 				ptr->inC++;
 				ptr->count++;
+				if (node->proto==TCPPROTO)
+				{
+					insert_session_node(ptr,node->session_list);
+				}
 				return -1;
 			}
 			else{
@@ -92,6 +119,8 @@ u_int32_t isPresent(flow_tuple_t *node,flow_tuple_t *table[])
 	}
 	return index;
 }
+
+
 /*
 *	Function to insert a new node into the table
 */
@@ -114,11 +143,6 @@ void insertNode(flow_tuple_t *node, flow_tuple_t *table[])
 		table[index]->prev=node;
 		table[index]=node;
 		node->prev=NULL;
-	/*	while(ptr->next!=NULL)
-			ptr=ptr->next;
-		ptr->next=node;
-		node->prev=ptr;
-		node->next=NULL;*/
 	}
 }
 /* 
@@ -142,6 +166,17 @@ void deleteNode(flow_tuple_t *node,flow_tuple_t *table[])
 		table[index] = ptr->next;
 		if(ptr->next!=NULL)
 			ptr->next->prev==NULL;
+	}
+}
+/*	
+*	Funtion to print the session nodes of the flow 
+*/
+void print_sessions(session_t *list){
+	while (list->next!=NULL)
+	{
+		printf("Payload length = %u\n",list->payload_length);
+		print_payload(list->payload, list->payload_length);
+		list=list->next;
 	}
 }
 /*
@@ -168,6 +203,11 @@ void printTable(flow_tuple_t *table[])
 			       (node->proto==TCPPROTO)?"TCP":"UDP",node->count,
 			       node->outC,node->inC);
 			++count;
+			if (node->proto==TCPPROTO)
+			{
+				print_sessions(node->session_list);
+			}
+			
 			node=node->next;
 		}
 	}

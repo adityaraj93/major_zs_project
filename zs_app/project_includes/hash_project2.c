@@ -28,18 +28,15 @@
 */
 u_int32_t hash(flow_tuple_t *node) 
 {	
-	return (((node->srcip^node->dstip)*59)^((node->sport^node->dport)<<16)^node->proto);
+	return (((node->srcip^node->dstip)*59)^
+			((node->sport^node->dport)<<16)^
+			node->proto);
 }
 /*
 *	create a table and intitialie its entries to NULL
 */
 
 flow_tuple_t *flow_tuple_hash_table[TABLESIZE]={NULL};
-
-/*flow_tuple_t*[TABLESIZE] create_table()
-{
-	return flow_tuple_hash_table;
-}*/
 /* 
 *	search for the node in the particular index of the table
 */
@@ -112,11 +109,16 @@ void insertNode(flow_tuple_t *node, flow_tuple_t *table[])
 		table[index]=node;
 	else{	// if its a collision then a doubly linked list is created
 		ptr=table[index];
-		while(ptr->next!=NULL)
+		// add the tuple at the start of the list 
+		node->next=table[index];
+		table[index]->prev=node;
+		table[index]=node;
+		node->prev=NULL;
+	/*	while(ptr->next!=NULL)
 			ptr=ptr->next;
 		ptr->next=node;
 		node->prev=ptr;
-		node->next=NULL;
+		node->next=NULL;*/
 	}
 }
 /* 

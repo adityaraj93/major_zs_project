@@ -19,6 +19,8 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include "regex_project.c"
+
 #define TABLESIZE 10007 
 #define PRINTIP(ip) printf("%u.%u.%u.%u",\
 			((ip&0xff000000)>>24),((ip&0x00ff0000)>>16),\
@@ -122,7 +124,7 @@ u_int32_t isPresent(flow_tuple_t *node,flow_tuple_t *table[])
 
 
 /*
-*	Function to insert a new node into the table
+*	Function to insert a new node into the hash table
 */
 void insertNode(flow_tuple_t *node, flow_tuple_t *table[])
 {
@@ -174,8 +176,17 @@ void deleteNode(flow_tuple_t *node,flow_tuple_t *table[])
 void print_sessions(session_t *list){
 	while (list->next!=NULL)
 	{
-		printf("Payload length = %u\n",list->payload_length);
-		print_payload(list->payload, list->payload_length);
+		printf("\nPayload length = %u\n",list->payload_length);
+		printf("Ack No. %10u\n",list->ack_no);
+		printf("Seq No. %10u\n",list->seq_no);
+		printf("Src Ip = ");PRINTIP(list->srcip);
+		printf("\nDst Ip = ");PRINTIP(list->dstip);
+		printf("\nApplication: ");
+//		print_payload(list->payload, list->payload_length);
+		if (control_regex(list->payload))
+		{
+			print_payload(list->payload, list->payload_length);
+		}
 		list=list->next;
 	}
 }
@@ -192,7 +203,7 @@ void printTable(flow_tuple_t *table[])
 		if(table[index]==NULL)
 			continue;
 		++ic;
-		printf("Index : %d\n",index);
+		printf("\nIndex : %d\n",index);
 		node = table[index];
 		while(node!=NULL){
 			printf("%3d IPS ",index);

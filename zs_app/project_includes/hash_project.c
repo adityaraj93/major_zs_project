@@ -124,7 +124,7 @@ void insertNode(struct flow_tuple *node, struct flow_tuple **table)
 }
 /* 
 *	Function to delete an existing node from the table
-*/
+*//*
 void deleteNode(struct flow_tuple *node,struct flow_tuple **table)
 {
 	u_int32_t index = hash(node)%TABLESIZE;
@@ -144,7 +144,7 @@ void deleteNode(struct flow_tuple *node,struct flow_tuple **table)
 		if(ptr->next!=NULL)
 			ptr->next->prev==NULL;
 	}
-}
+}*/
 /*
 *	Function to print all the flows recorded in the table
 *	along with the number of flows and the number of 

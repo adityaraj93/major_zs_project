@@ -1,12 +1,29 @@
 /*
+ * nt_3_1.c
+ * This file is part of Major Project
+ *
+ * Copyright (C) 2016 - Aditya Raj
+ *
+ * Major Project is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * Major Project is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Major Project. If not, see <http://www.gnu.org/licenses/>.
+ */
+/*
 *	Program to print the five tuples of flow - 
 *	src IP, src port, dst IP, dst port, protocol(TCP or UDP)
 *	and store them in a hash table
 *	and display the hash table
 */
-#include"project_includes/project.h"
-#include"project_includes/hash_project2.c"
-#include"project_includes/regex_project.c"
+
 #include<pcap/pcap.h>
 #include<sys/types.h>
 #include<stdio.h>
@@ -18,6 +35,9 @@
 #include<netinet/tcp.h>
 #include<netinet/udp.h>
 #include<signal.h>
+#include"project_includes/project.h"
+#include"project_includes/regex_project.c"
+#include"project_includes/hash_project2.c"
 
 #define MAX_PACKETS 1000
 #define IP_S_TO_N(addd) (((addd->a)<<24)|\
@@ -126,14 +146,22 @@ print_payload(const u_char *payload, int len)
 }
 
 // function to copy the payload of the packet to the flow_tuple structure
-void tcp_payload_copy(	const struct tcphdr *tcp_and_payload, 	// pointer to TCP header
-					  	flow_tuple_t *node, 					// pointer to the index in the list where node is to be inserted
-					  	u_int payload_length,					// length of the payload
-					  	session_t *session)						// session_t structure in which payload is to be copied
+void tcp_payload_copy(	const struct tcphdr *tcp_and_payload,// pointer to TCP 
+															 // header
+					  	flow_tuple_t *node, 		// pointer to the index in
+					  								// the list where node is 
+					  								// to be inserted
+					  	u_int payload_length,		// length of the payload
+					  	session_t *session)			// session_t structure in 
+					  								// which payload is to be 
+					  								// copied
 {
 	int i;
-	const u_char *payload = (u_char*)(((u_char*)tcp_and_payload)+ tcp_and_payload->th_off*4);
+	const u_char *payload = (u_char*)(((u_char*)tcp_and_payload)+ 
+										tcp_and_payload->th_off*4);
 	session->payload_length = payload_length;
+	session->ack_no=tcp_and_payload->th_ack;
+	session->seq_no=tcp_and_payload->th_seq;
 	if (payload_length<0)
 	{
 		return;
@@ -187,20 +215,22 @@ void printIpAdd(struct ip *addr,int lenp)
 		list[pcount].flags = tcph->th_flags;
 		list[pcount].ack_no = tcph->th_ack;
 		list[pcount].seq_no = tcph->th_seq;
-		list[pcount].count=1;
+		list[pcount].count = 1;
 		list[pcount].next = NULL;
 		list[pcount].prev = NULL;
 		list[pcount].sport = ntohs(tcph->source);
 		list[pcount].dport = ntohs(tcph->dest);
 		list[pcount].srcip = IP_S_TO_N(src);
+		list[pcount].dstip = IP_S_TO_N(dst);		
+		
 		session_t *session = (session_t*)malloc(sizeof(session_t));
 		session->next=NULL;
+		session->srcip = IP_S_TO_N(src);
+		session->dstip = IP_S_TO_N(dst);		
 		tcp_payload_copy( tcph,list+pcount, 
 						  ntohs(addr->ip_len)-(addr->ip_hl*4 + tcph->th_off*4),
 						  session  ); 
-		list[pcount].session_list = session;
-
-		list[pcount++].dstip = IP_S_TO_N(dst);
+		list[pcount++].session_list = session;
 
 		insertNode(&list[pcount-1],flow_tuple_hash_table);
 	}
@@ -315,7 +345,7 @@ void main(){
 	signal(SIGTSTP,breakl);
 	printf("------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 	printf("|Packet| Header |   Type    | Cnt  |    Source IP   |  Destination    | Protocol | Source| Dest  | TCP Flags     | Is Flow \n");
-	printf("|Number: Length |           |      |     address    |  IP  address    |          | Port  | Port  |               | Present? \n");
+	printf("|Number| Length |           |      |     address    |  IP  address    |          | Port  | Port  |               | Present? \n");
 	printf("------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 
 	// not ssh, arp, and not broadcast

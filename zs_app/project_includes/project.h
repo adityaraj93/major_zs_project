@@ -14,15 +14,19 @@
 
 // Structure to store the IPv4 addresses, and print them in octets
 struct ipaddr{
-	unsigned int a:8;
-	unsigned int b:8;
-	unsigned int c:8;
-	unsigned int d:8;
+	u_int8_t a;
+	u_int8_t b;
+	u_int8_t c;
+	u_int8_t d;
 };
 typedef struct session{
 #define PAYLOAD_MAX_LENGTH 2000
 	u_char payload[PAYLOAD_MAX_LENGTH];
 	u_int payload_length;
+	u_int32_t ack_no;		/* the acknowledgement number */
+	u_int32_t seq_no;		/* the sequence number */
+	u_int32_t dstip;		/* the destination IP address */
+	u_int32_t srcip;		/* the source IP address */
 	struct session *next;
 } session_t;
 struct flow_tuple{

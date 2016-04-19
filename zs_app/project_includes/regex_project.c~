@@ -61,23 +61,22 @@ int control_regex(const char *packet_payload)
 		if (!compile_regex(&regex, signatures[i]))
 		{
 			if(!(match=match_regex(&regex, packet_payload))){
-//				printf("%s-------------------------",signature_names[i]);
+				printf("%s-------------------------",signature_names[i]);
 				return i;
 			}
 			else if (match==REG_NOMATCH)
 			{
-				//printf("Unknown");
-			//	return -1;
+				printf("Unknown");
+				return 0;
 			}
 			else
 			{
-			//	printf("MATCH_ERROR");
-			//	return -1;
+				printf("MATCH_ERROR");
+				return 0;
 			}
 		}
 		regfree(&regex);
 	}
-	return -1;
 }
 
 #endif /* project_includes/regex_project.c */ 

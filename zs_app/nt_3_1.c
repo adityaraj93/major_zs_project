@@ -1,29 +1,3 @@
-/*
- * nt_3_1.c
- * This file is part of Major Project
- *
- * Copyright (C) 2016 - Aditya Raj
- *
- * Major Project is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * Major Project is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Major Project. If not, see <http://www.gnu.org/licenses/>.
- */
-/*
-*	Program to print the five tuples of flow - 
-*	src IP, src port, dst IP, dst port, protocol(TCP or UDP)
-*	and store them in a hash table
-*	and display the hash table
-*/
-
 #include<pcap/pcap.h>
 #include<sys/types.h>
 #include<stdio.h>
@@ -147,26 +121,27 @@ print_payload(const u_char *payload, int len)
 
 // function to copy the payload of the packet to the flow_tuple structure
 void tcp_payload_copy(	const struct tcphdr *tcp_and_payload,// pointer to TCP 
-															 // header
-					  	flow_tuple_t *node, 		// pointer to the index in
-					  								// the list where node is 
-					  								// to be inserted
-					  	u_int payload_length,		// length of the payload
-					  	session_t *session)			// session_t structure in 
-					  								// which payload is to be 
-					  								// copied
+    						             // header
+			flow_tuple_t *node, 		// pointer to the index in
+							// the list where node is 
+							// to be inserted
+			u_int payload_length,		// length of the payload
+			session_t *session)		// session_t structure in 
+					  		// which payload is to be
+					  		// copied
 {
 	int i;
 	const u_char *payload = (u_char*)(((u_char*)tcp_and_payload)+ 
-										tcp_and_payload->th_off*4);
+				           tcp_and_payload->th_off*4);
 	session->payload_length = payload_length;
+	session->payload = malloc(payload_length+1);
 	session->ack_no=tcp_and_payload->th_ack;
 	session->seq_no=tcp_and_payload->th_seq;
 	if (payload_length<0)
 	{
 		return;
 	}
-	bzero(session->payload,PAYLOAD_MAX_LENGTH);
+	bzero(session->payload,payload_length+1);
 	for(i=0;i<payload_length;i++){
 		session->payload[i]=*(payload+i);
 	}
@@ -223,13 +198,13 @@ void printIpAdd(struct ip *addr,int lenp)
 		list[pcount].srcip = IP_S_TO_N(src);
 		list[pcount].dstip = IP_S_TO_N(dst);		
 		
-		session_t *session = (session_t*)malloc(sizeof(session_t));
+		session_t *session= malloc(sizeof(session_t));
 		session->next=NULL;
 		session->srcip = IP_S_TO_N(src);
 		session->dstip = IP_S_TO_N(dst);		
 		tcp_payload_copy( tcph,list+pcount, 
-						  ntohs(addr->ip_len)-(addr->ip_hl*4 + tcph->th_off*4),
-						  session  ); 
+				  ntohs(addr->ip_len)-(addr->ip_hl*4 + tcph->th_off*4),
+				  session  ); 
 		list[pcount++].session_list = session;
 
 		insertNode(&list[pcount-1],flow_tuple_hash_table);
@@ -292,64 +267,80 @@ void breakl(int s){
 	pcap_breakloop(descr);
 }
 
-void main(){
+void main(int argc, char **argv){
 	char message[10],dev[20]={0};
 	int i=0,j,interface_count=0;
+	char errbuff[PCAP_ERRBUF_SIZE];
 	bpf_u_int32 pMask,pNet;
 	struct bpf_program fpr;
-	pcap_findalldevs(&alldevs,message);
-	printf("-----------------------------------------------------------------------------------------------------------\n");
-	printf("No. | Interface       |    Mask          | Net             |  Description  \n");
-	printf("-----------------------------------------------------------------------------------------------------------\n");
-	for(d=alldevs;d;d=d->next)
-	{
-		printf("%3d | %-15s | ",++i,d->name);
-		pcap_lookupnet(d->name,&pNet,&pMask,message);
-		ip = (struct ipaddr*)&pNet;
-		msk = (struct ipaddr*)&pMask;
-		printf(" %3u.%3u.%3u.%3u | %3u.%3u.%3u.%3u | ",
-			msk->a,msk->b,msk->c,msk->d,ip->a,ip->b,ip->c,ip->d);
-		if(d->description)
-			printf(" %s \n",d->description);
-		else
-			printf(" No description\n");
-		interface_count++;
-	}
-	printf("-----------------------------------------------------------------------------------------------------------\n");
-	do{
-		printf("Enter the interface number: ");
-		scanf("%d",&i);
-		if( i<1 || i>interface_count)
-			printf("ERROR : Not a valid interface number.\n");
-	}while(i<1 || i>interface_count);
-	--i;
-	j=0;
-	d=alldevs;
-	while(j<i)
-		d=d->next,j++;
-	printf("Selected interface: %s\n",d->name);	
-	printf("-----------------------------------------------------------------------------------------------------------\n");
-	strcpy(dev,d->name);
-	printf("Promiscuous: 0-No 1-yes? ");
-	scanf("%d",&i);
-	printf("Output:- %s : Type ",dev);
-	descr = pcap_open_live(dev,2048,i,512,message);
-	if(pcap_datalink(descr)==DLT_EN10MB)// its a etherner (10MBps) packet
-		printf("Ethernet \n");
 	
+	if(argc==2){
+		descr = pcap_open_offline(argv[1],errbuff);
+		if(descr==NULL){
+			fprintf(stderr,"Error opening dump file: ");
+			fprintf(stderr,"%s",errbuff);
+			fprintf(stderr, "\n");
+			return;
+		}
+	}
+	else if(argc!=1){
+		printf("Usage: %s [pcap-filename]\n",argv[0]);
+		return;
+	}
+	else{
+		pcap_findalldevs(&alldevs,message);
+		printf("-----------------------------------------------------------------------------------------------------------\n");
+		printf("No. | Interface       |    Mask          | Net             |  Description  \n");
+		printf("-----------------------------------------------------------------------------------------------------------\n");
+		for(d=alldevs;d;d=d->next)
+		{
+			printf("%3d | %-15s | ",++i,d->name);
+			pcap_lookupnet(d->name,&pNet,&pMask,message);
+			ip = (struct ipaddr*)&pNet;
+			msk = (struct ipaddr*)&pMask;
+			printf(" %3u.%3u.%3u.%3u | %3u.%3u.%3u.%3u | ",
+				msk->a,msk->b,msk->c,msk->d,ip->a,ip->b,ip->c,ip->d);
+			if(d->description)
+				printf(" %s \n",d->description);
+			else
+				printf(" No description\n");
+			interface_count++;
+		}
+		printf("-----------------------------------------------------------------------------------------------------------\n");
+		do{
+			printf("Enter the interface number: ");
+			scanf("%d",&i);
+			if( i<1 || i>interface_count)
+				printf("ERROR : Not a valid interface number.\n");
+		}while(i<1 || i>interface_count);
+		--i;
+		j=0;
+		d=alldevs;
+		while(j<i)
+			d=d->next,j++;
+		printf("Selected interface: %s\n",d->name);	
+		printf("-----------------------------------------------------------------------------------------------------------\n");
+		strcpy(dev,d->name);
+		printf("Promiscuous: 0-No 1-yes? ");
+		scanf("%d",&i);
+		printf("Output:- %s : Type ",dev);
+		descr = pcap_open_live(dev,2048,i,512,message);
+		if(pcap_datalink(descr)==DLT_EN10MB)// its a etherner (10MBps) packet
+			printf("Ethernet \n");
+	}
 	printf("-----------------------------------------------------------------------------------------------------------\n");
 
 	printf("Starting Capture......\n\n");
 		
 	signal(SIGINT,breakl);
 	signal(SIGTSTP,breakl);
-	printf("------------------------------------------------------------------------------------------------------------------------------------------------------\n");
-	printf("|Packet| Header |   Type    | Cnt  |    Source IP   |  Destination    | Protocol | Source| Dest  | TCP Flags     | Is Flow \n");
-	printf("|Number| Length |           |      |     address    |  IP  address    |          | Port  | Port  |               | Present? \n");
-	printf("------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+	printf("----------------------------------------------------------------------------------------------------------------------------\n");
+	printf("|Packet| Header |   Type    | Cnt  |    Source IP   |  Destination    | Protocol | Source| Dest  | TCP Flags     | Is Flow |\n");
+	printf("|Number| Length |           |      |     address    |  IP  address    |          | Port  | Port  |               | Present?| \n");
+	printf("----------------------------------------------------------------------------------------------------------------------------\n");
 
 	// not ssh, arp, and not broadcast
-	pcap_compile(descr,&fpr,"not port 22 and not arp and not dst host 255.255.255.255",0,0); 
+	pcap_compile(descr,&fpr,"not arp and not dst host 255.255.255.255",0,0); 
 	pcap_setfilter(descr,&fpr);	// setting the filter
 	pcap_loop(descr,MAX_PACKETS,fp,NULL);	// start capturing MAX_PACKETS packets and callback null
 	pcap_freealldevs(alldevs);	// free all after cpaturing is done

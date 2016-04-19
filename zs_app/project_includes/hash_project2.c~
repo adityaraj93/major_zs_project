@@ -170,7 +170,6 @@ void insertNode(flow_tuple_t *node, flow_tuple_t *table[])
 			ptr->next->prev==NULL;
 	}
 }*/
-void print_sessions(session_t *list);
 /* 
 *	Function to match the payload to the list of applications
 *	and return the application name.
@@ -178,24 +177,26 @@ void print_sessions(session_t *list);
 void lookup_application(flow_tuple_t *node)
 {
 	session_t *ptr = node->session_list;
-	node->matched=0;
-	bzero(node->application,sizeof(node->application));
+	ptr->matched=0;
+	bzero(ptr->application,sizeof(ptr->application));
 	while(ptr->next!=NULL)
 	{	
-		int ret = control_regex(ptr->payload);
-		if(ret!=-1)
+		int ret = control_regex(ptr->payload)
+		if(!=-1)
 		{
-			strcpy(node->application, signature_names[ret]);
-			node->matched=1;
+			strcpy(ptr->application, signature_names[ret]);
+			ptr->matched=1;
 			break;
 		}
-		ptr=ptr->next;
 	}
-	if(!node->matched){
-		strcpy(node->application,"Unknown");
+	if(ptr->matched)
+	{
+		printf("Application: %s\n",ptr->application);
 	}
-	printf("Application: %s\n",node->application);
-
+	else
+	{
+		strcpy(ptr->application,"Unknown");
+	}
 }
 /*	
 *	Funtion to print the session nodes of the flow 
@@ -209,7 +210,7 @@ void print_sessions(session_t *list)
 		printf("Ack No. %10u\n",list->ack_no);
 		printf("Seq No. %10u\n",list->seq_no);
 		PRINTIP(list->srcip);printf(">");PRINTIP(list->dstip);
-		printf("\nApplication: \n");
+		printf("\nApplication: ");
 		if (control_regex(list->payload))
 		{
 			print_payload(list->payload, list->payload_length);
@@ -238,14 +239,13 @@ void printTable(flow_tuple_t *table[])
 			PRINTIP(node->srcip);
 			printf(":%d > ",node->sport);
 			PRINTIP(node->dstip);
-			printf(":%d L4: %s Count %u Out: %u In %u ",node->dport,
+			printf(":%d L4: %s Count %u Out: %u In %u\n",node->dport,
 			       (node->proto==TCPPROTO)?"TCP":"UDP",node->count,
 			       node->outC,node->inC);
 			++count;
 			if (node->proto==TCPPROTO)
 			{
-//				print_sessions(node->session_list);
-				lookup_application(node);
+				print_sessions(node->session_list);
 			}
 			
 			node=node->next;

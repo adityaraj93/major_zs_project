@@ -20,24 +20,25 @@ struct ipaddr{
 	u_int8_t d;
 };
 typedef struct session{
-#define PAYLOAD_MAX_LENGTH 2000
-	u_char payload[PAYLOAD_MAX_LENGTH];
 	u_int payload_length;
 	u_int32_t ack_no;		/* the acknowledgement number */
 	u_int32_t seq_no;		/* the sequence number */
 	u_int32_t dstip;		/* the destination IP address */
 	u_int32_t srcip;		/* the source IP address */
+	u_char *payload;
 	struct session *next;
 } session_t;
 struct flow_tuple{
 	u_int8_t proto;	/* the protocol number of transport layer protocol */
 	u_int8_t flags;			/* the flags */
+	u_char application[16];		/* name of application protocol */
 	u_int32_t dstip;		/* the destination IP address */
 	u_int32_t srcip;		/* the source IP address */
 	u_int16_t sport;		/* the source port number */
 	u_int16_t dport;		/* the destination port number */
 	u_int32_t ack_no;		/* the acknowledgement number */
 	u_int32_t seq_no;		/* the sequence number */
+	u_int matched;			/* the flag to see if flow has been mathced or not*/
 	u_int32_t count;
 	u_int32_t outC;			/* count of outgoing packets of the microflow */
 	u_int32_t inC;			/* count of incoming packets of the microflow */

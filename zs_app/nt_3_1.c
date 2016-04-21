@@ -13,7 +13,7 @@
 #include"project_includes/regex_project.c"
 #include"project_includes/hash_project2.c"
 
-#define MAX_PACKETS 1000
+#define MAX_PACKETS 5000
 #define IP_S_TO_N(addd) (((addd->a)<<24)|\
 			((addd->b)<<16)|\
 			((addd->c)<<8)|\
@@ -334,13 +334,13 @@ void main(int argc, char **argv){
 		
 	signal(SIGINT,breakl);
 	signal(SIGTSTP,breakl);
+
 	printf("----------------------------------------------------------------------------------------------------------------------------\n");
 	printf("|Packet| Header |   Type    | Cnt  |    Source IP   |  Destination    | Protocol | Source| Dest  | TCP Flags     | Is Flow |\n");
 	printf("|Number| Length |           |      |     address    |  IP  address    |          | Port  | Port  |               | Present?| \n");
 	printf("----------------------------------------------------------------------------------------------------------------------------\n");
 
-	// not ssh, arp, and not broadcast
-	pcap_compile(descr,&fpr,"not arp and not dst host 255.255.255.255",0,0); 
+	pcap_compile(descr,&fpr,"not port 22 and not arp and not dst host 255.255.255.255",0,0); 
 	pcap_setfilter(descr,&fpr);	// setting the filter
 	pcap_loop(descr,MAX_PACKETS,fp,NULL);	// start capturing MAX_PACKETS packets and callback null
 	pcap_freealldevs(alldevs);	// free all after cpaturing is done

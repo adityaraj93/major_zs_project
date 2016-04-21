@@ -340,7 +340,7 @@ void main(int argc, char **argv){
 	printf("|Number| Length |           |      |     address    |  IP  address    |          | Port  | Port  |               | Present?| \n");
 	printf("----------------------------------------------------------------------------------------------------------------------------\n");
 
-	pcap_compile(descr,&fpr,"not port 22 and not arp and not dst host 255.255.255.255",0,0); 
+	pcap_compile(descr,&fpr,"not arp and not dst host 255.255.255.255",0,0); 
 	pcap_setfilter(descr,&fpr);	// setting the filter
 	pcap_loop(descr,MAX_PACKETS,fp,NULL);	// start capturing MAX_PACKETS packets and callback null
 	pcap_freealldevs(alldevs);	// free all after cpaturing is done
@@ -365,5 +365,6 @@ void main(int argc, char **argv){
 	}
 
 	printf("\n\n***************************************************************************************************************************\n\n");*/
+	printf("\n");
 	printTable(flow_tuple_hash_table);
 }

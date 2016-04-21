@@ -22,7 +22,7 @@
 #include "regex_project.c"
 
 #define TABLESIZE 10007 
-#define PRINTIP(ip) printf("%u.%u.%u.%u",\
+#define PRINTIP(ip) printf("%3u.%3u.%3u.%3u",\
 			((ip&0xff000000)>>24),((ip&0x00ff0000)>>16),\
 			((ip&0x0000ff00)>>8),(ip&0x000000ff))
 			
@@ -195,6 +195,10 @@ void lookup_application(flow_tuple_t *node)
 		strcpy(node->application,"Unknown");
 	}
 	printf("Application: %s\n",node->application);
+/*	if(node->sport==21 && node->dport == 57823)
+		print_sessions(node->session_list);
+	else if (node->sport==57823 && node->dport==21)
+		print_sessions(node->session_list); */
 
 }
 /*	
@@ -231,22 +235,23 @@ void printTable(flow_tuple_t *table[])
 		if(table[index]==NULL)
 			continue;
 		++ic;
-		printf("\nIndex : %d\n",index);
+//		printf("\nIndex : %d\n",index);
 		node = table[index];
 		while(node!=NULL){
 			printf("%3d: ",index);
 			PRINTIP(node->srcip);
-			printf(":%d > ",node->sport);
+			printf(":%05d > ",node->sport);
 			PRINTIP(node->dstip);
-			printf(":%d L4: %s Count %u Out: %u In %u ",node->dport,
-			       (node->proto==TCPPROTO)?"TCP":"UDP",node->count,
-			       node->outC,node->inC);
+			printf(":%05d L4: %s Count %u ",node->dport,
+			       (node->proto==TCPPROTO)?"TCP":"UDP",node->count);
 			++count;
 			if (node->proto==TCPPROTO)
 			{
 //				print_sessions(node->session_list);
 				lookup_application(node);
 			}
+			else
+				printf("\n");
 			
 			node=node->next;
 		}

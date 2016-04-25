@@ -1,30 +1,26 @@
-#include<pcap/pcap.h>
-#include<sys/types.h>
-#include<stdio.h>
-#include<sys/types.h>
-#include<string.h>
-#include<netinet/if_ether.h>
-#include<stdlib.h>
-#include<netinet/ip.h>
-#include<netinet/tcp.h>
-#include<netinet/udp.h>
-#include<signal.h>
-#include"project_includes/project.h"
-#include"project_includes/regex_project.c"
-#include"project_includes/hash_project2.c"
+#include <sys/types.h>
+#include <netinet/if_ether.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <pcap/pcap.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <string.h>
+
+#include "project_includes/project.h"
+#include "project_includes/regex_project.c"
+#include "project_includes/hash_project2.c"
 
 #define MAX_PACKETS 5000
-#define IP_S_TO_N(addd) (((addd->a)<<24)|\
-			((addd->b)<<16)|\
-			((addd->c)<<8)|\
+#define IP_S_TO_N(addd) (((addd->a)<<24)|				       \
+			((addd->b)<<16)|				       \
+			((addd->c)<<8)|					       \
 			(addd->d))
 
 
-flow_tuple_t list[MAX_PACKETS];
-struct ipaddr *ip,*msk;
-u_int32_t pcount=0;
-u_int8_t myadd[ETH_ALEN] = {0xe0,0x69,0x95,0xd1,0xc7,0x17};
-u_int8_t etha[ETH_ALEN];
 
 void
 print_hex_ascii_line(const u_char *payload, int len, int offset)
@@ -153,6 +149,8 @@ void printIpAdd(struct ip *addr,int lenp)
 {
 	struct ipaddr *src,*dst;
 	unsigned int hdrlen, protocol;	
+	flow_tuple_t list[MAX_PACKETS];
+	static u_int32_t pcount=0;
 	struct tcphdr *tcph;
 	struct udphdr *udph;
 	src = (struct ipaddr*)&(addr->ip_src.s_addr);	// take the source address
@@ -260,7 +258,6 @@ void fp(u_char *arg1, const struct pcap_pkthdr* pkhdr, const u_char* packet) {
 	printf("\n");	
 }
 
-pcap_if_t *alldevs,*d;
 pcap_t *descr=NULL;
 
 void breakl(int s){
@@ -270,6 +267,8 @@ void breakl(int s){
 void main(int argc, char **argv){
 	char message[10],dev[20]={0};
 	int i=0,j,interface_count=0;
+	struct ipaddr *ip,*msk;
+	pcap_if_t *alldevs,*d;
 	char errbuff[PCAP_ERRBUF_SIZE];
 	bpf_u_int32 pMask,pNet;
 	struct bpf_program fpr;
